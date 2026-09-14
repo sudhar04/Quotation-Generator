@@ -310,7 +310,7 @@ This project is currently intended for personal and demonstration purposes.
 
 This project was built using **Lovable** and synchronized with GitHub.
 
-🔗 **Live Project:** [Quotation Craft](https://lovable.dev/)
+🔗 **Live Project:** [Quotation Craft](https://quotation-studio.lovable.app/)
 
 ⭐ If you find this project useful, consider giving the repository a star!
 
