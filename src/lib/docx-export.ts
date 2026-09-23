@@ -51,60 +51,90 @@ interface RunStyle {
   strike?: boolean;
 }
 
-function htmlToRuns(html: string, size: number, color: string): TextRun[] {
+/**
+ * Convert a small subset of inline HTML into docx runs.
+ * Styles are baked into each run at creation time — docx run instances are
+ * immutable, so they must never be re-created from an existing run.
+ */
+function htmlToRuns(
+  html: string,
+  size: number,
+  color: string,
+  force: RunStyle = {},
+): TextRun[] {
   const runs: TextRun[] = [];
-  const doc = new DOMParser().parseFromString(`<div>${html}</div>`, "text/html");
-
-  const walk = (node: Node, style: RunStyle) => {
-    node.childNodes.forEach((child) => {
-      if (child.nodeType === Node.TEXT_NODE) {
-        const text = child.textContent ?? "";
-        if (!text) return;
-        runs.push(
-          new TextRun({
-            text,
-            size: Math.round(size * 2),
-            color: color.replace("#", ""),
-            bold: style.bold,
-            italics: style.italics,
-            underline: style.underline ? {} : undefined,
-            strike: style.strike,
-            font: "Arial",
-          }),
-        );
-        return;
-      }
-      if (child.nodeType !== Node.ELEMENT_NODE) return;
-      const el = child as HTMLElement;
-      const next: RunStyle = { ...style };
-      if (["B", "STRONG"].includes(el.tagName)) next.bold = true;
-      if (["I", "EM"].includes(el.tagName)) next.italics = true;
-      if (el.tagName === "U") next.underline = true;
-      if (["S", "STRIKE", "DEL"].includes(el.tagName)) next.strike = true;
-      if (el.tagName === "BR") {
-        runs.push(new TextRun({ break: 1 }));
-        return;
-      }
-      walk(el, next);
+  const make = (text: string, style: RunStyle) =>
+    new TextRun({
+      text,
+      size: Math.max(2, Math.round(size * 2)),
+      color: (color || "#1a1a1a").replace("#", ""),
+      bold: force.bold || style.bold,
+      italics: force.italics || style.italics,
+      underline: force.underline || style.underline ? {} : undefined,
+      strike: force.strike || style.strike,
+      font: "Arial",
     });
-  };
 
-  walk(doc.body.firstElementChild as Node, {});
-  if (!runs.length) runs.push(new TextRun({ text: "", size: Math.round(size * 2), font: "Arial" }));
+  const source = typeof html === "string" ? html : "";
+
+  if (typeof DOMParser === "undefined") {
+    const plain = source
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<[^>]*>/g, "")
+      .replace(/&nbsp;/g, " ")
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">");
+    plain.split("\n").forEach((line, i) => {
+      if (i > 0) runs.push(new TextRun({ break: 1 }));
+      if (line) runs.push(make(line, {}));
+    });
+  } else {
+    const doc = new DOMParser().parseFromString(`<div>${source}</div>`, "text/html");
+    const walk = (node: Node, style: RunStyle) => {
+      node.childNodes.forEach((child) => {
+        if (child.nodeType === 3) {
+          const text = child.textContent ?? "";
+          if (!text) return;
+          runs.push(make(text, style));
+          return;
+        }
+        if (child.nodeType !== 1) return;
+        const el = child as HTMLElement;
+        const tag = el.tagName.toUpperCase();
+        if (tag === "BR") {
+          runs.push(new TextRun({ break: 1 }));
+          return;
+        }
+        const next: RunStyle = { ...style };
+        if (tag === "B" || tag === "STRONG") next.bold = true;
+        if (tag === "I" || tag === "EM") next.italics = true;
+        if (tag === "U") next.underline = true;
+        if (tag === "S" || tag === "STRIKE" || tag === "DEL") next.strike = true;
+        walk(el, next);
+      });
+    };
+    const root = doc.body.firstElementChild;
+    if (root) walk(root, {});
+  }
+
+  if (!runs.length)
+    runs.push(new TextRun({ text: "", size: Math.max(2, Math.round(size * 2)), font: "Arial" }));
   return runs;
 }
 
 async function dataUrlToBuffer(src: string) {
   const res = await fetch(src);
+  if (!res.ok) throw new Error(`Logo image could not be read (${res.status})`);
   const blob = await res.blob();
   return { buffer: await blob.arrayBuffer(), type: blob.type };
 }
 
-function imageType(mime: string): "png" | "jpg" | "gif" | "bmp" | "svg" {
+/** SVG needs a raster fallback in docx, so it is not supported here. */
+function imageType(mime: string): "png" | "jpg" | "gif" | "bmp" {
   if (mime.includes("jpeg") || mime.includes("jpg")) return "jpg";
   if (mime.includes("gif")) return "gif";
   if (mime.includes("bmp")) return "bmp";
-  if (mime.includes("svg")) return "svg";
   return "png";
 }
 
