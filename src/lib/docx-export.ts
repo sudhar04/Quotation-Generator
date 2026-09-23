@@ -249,14 +249,9 @@ export async function buildDocx(q: Quotation): Promise<Blob> {
             heading:
               level === 1 ? HeadingLevel.HEADING_1 : level === 2 ? HeadingLevel.HEADING_2 : HeadingLevel.HEADING_3,
             spacing: { before: Math.round(before * 20), after: Math.round(after * 20) },
-            children: htmlToRuns((block.content as TextContent).html, size, s.primaryColor).map(
-              (run) =>
-                new TextRun({
-                  ...(run as unknown as { options: object }).options,
-                  bold: true,
-                  color: primary,
-                }),
-            ),
+            children: htmlToRuns((block.content as TextContent).html, size, s.primaryColor, {
+              bold: true,
+            }),
           }),
         );
         break;
