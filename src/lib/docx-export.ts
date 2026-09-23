@@ -166,32 +166,6 @@ export async function buildDocx(q: Quotation): Promise<Blob> {
   const contentWidth = Math.round((210 - s.margins.left - s.margins.right) * MM_TO_DXA);
   const children: (Paragraph | Table)[] = [];
 
-  const txt = (
-    content: string,
-    opts: {
-      size?: number;
-      bold?: boolean;
-      align?: Align;
-      color?: string;
-      before?: number;
-      after?: number;
-      heading?: (typeof HeadingLevel)[keyof typeof HeadingLevel];
-    } = {},
-  ) =>
-    new Paragraph({
-      alignment: ALIGN[opts.align ?? "left"],
-      spacing: {
-        before: Math.round((opts.before ?? 0) * 20),
-        after: Math.round((opts.after ?? 4) * 20),
-        line: Math.round(s.lineHeight * 240),
-      },
-      heading: opts.heading,
-      children: htmlToRuns(content, opts.size ?? body, opts.color ?? text).map((run) => {
-        void run;
-        return run;
-      }),
-    });
-
   const styledParagraph = (
     html: string,
     size: number,
@@ -204,14 +178,9 @@ export async function buildDocx(q: Quotation): Promise<Blob> {
     new Paragraph({
       alignment: ALIGN[align],
       spacing: { before: Math.round(before * 20), after: Math.round(after * 20), line: Math.round(s.lineHeight * 240) },
-      children: htmlToRuns(html, size, color).map(
-        (run) =>
-          new TextRun({
-            ...(run as unknown as { options: object }).options,
-            bold: bold || (run as unknown as { options: { bold?: boolean } }).options.bold,
-          }),
-      ),
+      children: htmlToRuns(html, size, color, { bold }),
     });
+
 
   for (const block of q.blocks) {
     const bs = block.settings;
