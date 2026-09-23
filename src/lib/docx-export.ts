@@ -589,10 +589,6 @@ export async function buildDocx(q: Quotation): Promise<Blob> {
 
 export async function downloadDocx(q: Quotation) {
   const blob = await buildDocx(q);
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${(q.title || "quotation").replace(/[^\w\s-]/g, "").trim().replace(/\s+/g, "-").toLowerCase()}.docx`;
-  a.click();
-  URL.revokeObjectURL(url);
+  if (!blob || blob.size === 0) throw new Error("The generated Word file was empty.");
+  saveBlob(blob, `${documentFileName(q.title)}.docx`);
 }
