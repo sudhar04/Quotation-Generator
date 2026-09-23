@@ -12,6 +12,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { downloadDocx } from "@/lib/docx-export";
+import { downloadPdf } from "@/lib/pdf-export";
+import { documentFileName } from "@/lib/download";
 import type { Quotation } from "@/models/quotation";
 
 type Format = "pdf" | "docx";
@@ -35,7 +37,7 @@ const OPTIONS: {
     title: "PDF document",
     description: "Pixel-accurate A4 output that matches the preview exactly.",
     icon: Printer,
-    hint: "Opens your browser print dialog — choose “Save as PDF”.",
+    hint: "Downloads a real A4 portrait PDF file — no print dialog needed.",
   },
   {
     key: "docx",
@@ -46,26 +48,33 @@ const OPTIONS: {
   },
 ];
 
+function reason(error: unknown) {
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === "string" && error) return error;
+  return "Unexpected error while building the file.";
+}
+
 export function ExportDialog({ open, onOpenChange, quotation, pages }: Props) {
   const [format, setFormat] = useState<Format>("pdf");
   const [busy, setBusy] = useState(false);
 
   const handleExport = async () => {
-    if (format === "pdf") {
-      onOpenChange(false);
-      // Let the dialog unmount so it is not captured in the printed output.
-      setTimeout(() => window.print(), 120);
-      return;
-    }
+    if (busy) return;
     setBusy(true);
+    const name = documentFileName(quotation.title);
     try {
-      await downloadDocx(quotation);
-      toast.success("Word document downloaded");
+      if (format === "pdf") {
+        await downloadPdf(quotation);
+        toast.success("PDF downloaded", { description: `${name}.pdf` });
+      } else {
+        await downloadDocx(quotation);
+        toast.success("Word document downloaded", { description: `${name}.docx` });
+      }
       onOpenChange(false);
     } catch (error) {
-      console.error(error);
-      toast.error("Word export failed", {
-        description: "Something went wrong while building the document.",
+      console.error(`[export:${format}]`, error);
+      toast.error(format === "pdf" ? "PDF export failed" : "Word export failed", {
+        description: reason(error),
       });
     } finally {
       setBusy(false);
