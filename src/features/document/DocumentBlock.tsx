@@ -97,8 +97,9 @@ export function DocumentBlock({
             />
           ) : (
             <div
+              data-placeholder="logo"
               className={cn(
-                "flex h-[16mm] items-center justify-center rounded border border-dashed px-4 text-[9pt]",
+                "qs-placeholder flex h-[16mm] items-center justify-center rounded border border-dashed px-4 text-[9pt]",
                 editable ? "border-[#c9d2dc] text-[#8c97a5]" : "border-transparent text-transparent",
               )}
               style={{ width: `${width}mm` }}
