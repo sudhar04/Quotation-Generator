@@ -125,12 +125,18 @@ export function ExportDialog({ open, onOpenChange, quotation, pages }: Props) {
         </div>
 
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={busy}>
             Cancel
           </Button>
           <Button onClick={handleExport} disabled={busy}>
             {busy ? <Loader2 className="size-4 animate-spin" /> : <FileDown className="size-4" />}
-            {format === "pdf" ? "Export PDF" : "Download .docx"}
+            {busy
+              ? format === "pdf"
+                ? "Generating PDF…"
+                : "Generating Word document…"
+              : format === "pdf"
+                ? "Download PDF"
+                : "Download .docx"}
           </Button>
         </DialogFooter>
       </DialogContent>
