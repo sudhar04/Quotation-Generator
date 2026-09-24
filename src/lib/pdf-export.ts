@@ -7,6 +7,11 @@ const A4_MM = { width: 210, height: 297 };
 /** Strip editor-only chrome from a cloned page so only the document remains. */
 function cleanClone(page: HTMLElement) {
   page.querySelectorAll(".qs-no-print").forEach((node) => node.remove());
+  // Empty-state hints (e.g. the logo upload box) belong to the editor only.
+  page.querySelectorAll(".qs-placeholder").forEach((node) => {
+    node.textContent = "";
+    (node as HTMLElement).style.border = "none";
+  });
   page.style.transform = "none";
   page.style.margin = "0";
   page.style.boxShadow = "none";
